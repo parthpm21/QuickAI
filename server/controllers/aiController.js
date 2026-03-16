@@ -6,9 +6,15 @@ import axios from 'axios'
 import { v2 as cloudinary } from "cloudinary";
 import FormData from 'form-data'
 import fs from 'fs'
-//import pdf from 'pdf-parse'
+//import pdfParse from 'pdf-parse'
 import { createRequire } from 'module'
+const require = createRequire(import.meta.url);
 
+
+const pdfModule = require("pdf-parse");
+const pdf = pdfModule.default ? pdfModule.default : pdfModule;
+
+console.log("PDF IMPORT =", pdf);
 
 
 const AI = new OpenAI({
@@ -246,60 +252,56 @@ export const removeImageObject = async(req,res)=>{
 
 
 
+export const resumeReview = async (req, res) => {
+  try {
+    const { userId } = req.auth();
+    const resume = req.file;
+    const plan = req.plan;
 
-export const resumeReview = async(req,res)=>{
-    try {
-        const {userId }= req.auth();
-        const resume=req.file;
-        const plan=req.plan;
-        
-
-        
-
-        if(plan!=='premium'  ){
-            return res.json({success: false,message:"This feature is only available for premium subscriptions."})
-        }
-
-       if(resume.size>5*1024*1024){
-        return res.json({success:false,message:"Resume file size exceeds allowed size (5MB)."})
-       }
-
-    const dataBuffer=fs.readFileSync(resume.path)
-    const require = createRequire(import.meta.url)
-    const pdf = require('pdf-parse')
-
-    const pdfData=await pdf(dataBuffer)
-
-    const prompt= `Review the following resume and provide constructive feedback on its strengths, weaknesses, and areas for improvement. Resume Content:\n\n${pdfData.text}`
-
-     const response = await AI.chat.completions.create({
-    model: "gemini-3-flash-preview",
-    messages: [
-      {
-          role: "user",
-          content: prompt,
-      },
-
-    ],
-    temperature: 0.7,
-    max_tokens: 1000,
-  });
-
-    const content= response.choices[0].message.content
-
-
-    await sql` INSERT INTO CREATIONS(user_id,prompt, content, type) 
-    VALUES (${userId}, ' Review the uploaded resume', ${content}, 'resume-review')`;
-
-
-    res.json({success: true, content})
-
-    } catch (error) {
-        console.log(error.message)
-        res.json({success: false, message:error.message})
+    if (plan !== "premium") {
+      return res.json({
+        success: false,
+        message: "This feature is only available for premium subscriptions.",
+      });
     }
-}
 
+    if (!resume) {
+      return res.json({ success: false, message: "No resume uploaded." });
+    }
+
+    if (resume.size > 5 * 1024 * 1024) {
+      return res.json({
+        success: false,
+        message: "Resume file size exceeds allowed size (5MB).",
+      });
+    }
+
+    const dataBuffer = fs.readFileSync(resume.path);
+    const pdfData = await pdf(dataBuffer);
+
+    const prompt = `Review the following resume and provide feedback:\n\n${pdfData.text}`;
+
+    const response = await AI.chat.completions.create({
+      model: "gemini-3-flash-preview",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7,
+      max_tokens: 1000,
+    });
+
+    const content = response.choices[0].message.content;
+
+    await sql`
+      INSERT INTO CREATIONS(user_id,prompt, content, type) 
+      VALUES (${userId}, 'Review the uploaded resume', ${content}, 'resume-review')
+    `;
+
+    res.json({ success: true, content });
+
+  } catch (error) {   // ← this catch must match the try above
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
 
 
 

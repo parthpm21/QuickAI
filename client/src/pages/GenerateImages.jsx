@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 
 axios.defaults.baseURL=import.meta.env.VITE_BASE_URL;
 
-const GenerateImages = async () => {
+const GenerateImages = () => {
 
   
   const imageStyle=['Realistic','Ghibli style' ,'Cartoon style','Fantasy style','Realistic style','3D style','Portrait style']

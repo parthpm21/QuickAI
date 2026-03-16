@@ -11,7 +11,7 @@ axios.defaults.baseURL=import.meta.env.VITE_BASE_URL;
 
 const ReviewResume = () => {
 
-   const [input,setInput]=useState('')
+   const [input,setInput]=useState()
    const [loading,setLoading]=useState(false)
   const [content,setContent]=useState('')
 

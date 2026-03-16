@@ -53,7 +53,7 @@ const blogCategories=['General','Technology' ,'Business','Health','Lifestyle','E
 
         <p className='mt-4 text-sm font-medium'>Category</p>
 
-        <div className='mt-3 flex gap-3 flex-wrap sm:max-w-[9/11]'>
+        <div className='mt-3 flex gap-3 flex-wrap sm:max-w-[82%]'>
           {blogCategories.map((item)=>(
             <span onClick={()=>setSelectedCategory(item)} className={`text-xs px-4 py-1 border rounded-full cursor-pointer ${selectedCategory===item ?'bg-purple-50 text-purple-700':'text-gray-500 border-gray-300'}`} key={item}>{item}</span>
           ))}
