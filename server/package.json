@@ -22,7 +22,6 @@
     "express": "^5.2.1",
     "multer": "^2.0.2",
     "openai": "^6.17.0",
-    "pdf-parse": "^2.4.5",
     "pdfjs-dist": "^5.5.207",
     "remark-breaks": "^4.0.0"
   },

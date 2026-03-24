@@ -7,8 +7,7 @@ import { v2 as cloudinary } from "cloudinary";
 import FormData from 'form-data'
 import fs from 'fs'
 
-import { createRequire } from 'module'
-const require = createRequire(import.meta.url);
+
 
 
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
