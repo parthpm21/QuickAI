@@ -6,13 +6,12 @@ import axios from 'axios'
 import { v2 as cloudinary } from "cloudinary";
 import FormData from 'form-data'
 import fs from 'fs'
-//import pdfParse from 'pdf-parse'
+
 import { createRequire } from 'module'
 const require = createRequire(import.meta.url);
 
 
-const pdfModule = require("pdf-parse");
-const pdf = pdfModule.default ? pdfModule.default : pdfModule;
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
 console.log("PDF IMPORT =", pdf);
 
@@ -251,7 +250,6 @@ export const removeImageObject = async(req,res)=>{
 }
 
 
-
 export const resumeReview = async (req, res) => {
   try {
     const { userId } = req.auth();
@@ -276,10 +274,23 @@ export const resumeReview = async (req, res) => {
       });
     }
 
+    // 🔥 Read PDF using pdfjs
     const dataBuffer = fs.readFileSync(resume.path);
-    const pdfData = await pdf(dataBuffer);
 
-    const prompt = `Review the following resume and provide feedback:\n\n${pdfData.text}`;
+    const loadingTask = pdfjsLib.getDocument({ data: dataBuffer });
+    const pdfDoc = await loadingTask.promise;
+
+    let extractedText = "";
+
+    for (let i = 1; i <= pdfDoc.numPages; i++) {
+      const page = await pdfDoc.getPage(i);
+      const content = await page.getTextContent();
+
+      const pageText = content.items.map(item => item.str).join(" ");
+      extractedText += pageText + "\n";
+    }
+
+    const prompt = `Review the following resume and provide feedback:\n\n${extractedText}`;
 
     const response = await AI.chat.completions.create({
       model: "gemini-3-flash-preview",
@@ -288,22 +299,17 @@ export const resumeReview = async (req, res) => {
       max_tokens: 1000,
     });
 
-    const content = response.choices[0].message.content;
+    const result = response.choices[0].message.content;
 
     await sql`
       INSERT INTO CREATIONS(user_id,prompt, content, type) 
-      VALUES (${userId}, 'Review the uploaded resume', ${content}, 'resume-review')
+      VALUES (${userId}, 'Review the uploaded resume', ${result}, 'resume-review')
     `;
 
-    res.json({ success: true, content });
+    res.json({ success: true, content: result });
 
-  } catch (error) {   // ← this catch must match the try above
+  } catch (error) {
     console.log(error);
     res.json({ success: false, message: error.message });
   }
 };
-
-
-
-
-
