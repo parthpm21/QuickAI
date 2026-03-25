@@ -10,7 +10,7 @@ import fs from 'fs'
 
 
 
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 
 
@@ -248,7 +248,6 @@ export const removeImageObject = async(req,res)=>{
     }
 }
 
-
 export const resumeReview = async (req, res) => {
   try {
     const { userId } = req.auth();
@@ -256,10 +255,7 @@ export const resumeReview = async (req, res) => {
     const plan = req.plan;
 
     if (plan !== "premium") {
-      return res.json({
-        success: false,
-        message: "This feature is only available for premium subscriptions.",
-      });
+      return res.json({ success: false, message: "This feature is only available for premium subscriptions." });
     }
 
     if (!resume) {
@@ -267,32 +263,18 @@ export const resumeReview = async (req, res) => {
     }
 
     if (resume.size > 5 * 1024 * 1024) {
-      return res.json({
-        success: false,
-        message: "Resume file size exceeds allowed size (5MB).",
-      });
+      return res.json({ success: false, message: "Resume file size exceeds allowed size (5MB)." });
     }
 
-    // 🔥 Read PDF using pdfjs
+    // ✅ Use pdf-parse instead of pdfjs-dist
     const dataBuffer = fs.readFileSync(resume.path);
-
-    const loadingTask = pdfjsLib.getDocument({ data: dataBuffer });
-    const pdfDoc = await loadingTask.promise;
-
-    let extractedText = "";
-
-    for (let i = 1; i <= pdfDoc.numPages; i++) {
-      const page = await pdfDoc.getPage(i);
-      const content = await page.getTextContent();
-
-      const pageText = content.items.map(item => item.str).join(" ");
-      extractedText += pageText + "\n";
-    }
+    const pdfData = await pdfParse(dataBuffer);
+    const extractedText = pdfData.text;
 
     const prompt = `Review the following resume and provide feedback:\n\n${extractedText}`;
 
     const response = await AI.chat.completions.create({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.0-flash",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
       max_tokens: 1000,
@@ -301,7 +283,7 @@ export const resumeReview = async (req, res) => {
     const result = response.choices[0].message.content;
 
     await sql`
-      INSERT INTO CREATIONS(user_id,prompt, content, type) 
+      INSERT INTO CREATIONS(user_id, prompt, content, type) 
       VALUES (${userId}, 'Review the uploaded resume', ${result}, 'resume-review')
     `;
 
