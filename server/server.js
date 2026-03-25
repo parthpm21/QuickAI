@@ -8,7 +8,7 @@ import userRouter from './routes/userRoutes.js';
 
 const app=express()
 
-await connectCloudinary()
+connectCloudinary().catch(console.error);
 
 app.use(cors())
 app.use(express.json())
