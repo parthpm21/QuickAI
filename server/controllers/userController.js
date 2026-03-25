@@ -46,7 +46,7 @@ export const toggleLikeCreations= async (req,res)=>{
         let updatedLikes;
         let message;
 
-        if(currentLikes.include(userIdStr)){
+        if(currentLikes.includes(userIdStr)){
             updatedLikes=currentLikes.filter((user)=>user!==userIdStr);
             message=' Creation Unliked'
         }else{
@@ -54,7 +54,7 @@ export const toggleLikeCreations= async (req,res)=>{
             message=' Creation Liked'
         }
 
-        const formattedArray=` {${updatedLikes.join(' ,')}` 
+        const formattedArray=` {${updatedLikes.join(',')}}` 
 
 
 

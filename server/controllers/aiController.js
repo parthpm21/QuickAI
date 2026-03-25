@@ -12,7 +12,7 @@ import fs from 'fs'
 
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.js";
 
-console.log("PDF IMPORT =", pdf);
+
 
 
 const AI = new OpenAI({
@@ -34,7 +34,7 @@ export const generateArticle = async(req,res)=>{
 
         
   const response = await AI.chat.completions.create({
-    model: "gemini-3-flash-preview",
+    model: "gemini-2.0-flash",
     messages: [
       {
           role: "user",
