@@ -4,6 +4,8 @@ import { Heart } from 'lucide-react'
 import { useAuth, useUser } from '@clerk/clerk-react'
 import axios from 'axios'
 
+import toast from 'react-hot-toast'
+
 axios.defaults.baseURL=import.meta.env.VITE_BASE_URL;
 
 const Community = () => {
@@ -31,7 +33,7 @@ const Community = () => {
 
   const imageLikeToggle= async (id)=>{
     try {
-      const {data}=await axios.post('/api/user/toggle-like-creation',{id},{
+      const {data}=await axios.post('/api/user/toggle-like-creations',{id},{
         headers: {Authorization: `Bearer ${await getToken()}`}
       })
 
