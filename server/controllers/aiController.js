@@ -206,7 +206,6 @@ export const removeImageObject = async (req, res) => {
     }
 }
 
-
 export const resumeReview = async (req, res) => {
     try {
         const { userId } = req.auth();
@@ -225,25 +224,19 @@ export const resumeReview = async (req, res) => {
             return res.json({ success: false, message: "Resume file size exceeds allowed size (5MB)." });
         }
 
-        // Parse PDF safely with its own try/catch
+        // Use buffer directly — no file path needed
         let extractedText = '';
         try {
-            const dataBuffer = fs.readFileSync(resume.path);
-            const pdfData = await pdfParse(dataBuffer);
+            const pdfData = await pdfParse(resume.buffer);
             extractedText = pdfData.text?.trim();
         } catch (pdfError) {
             console.log('PDF parse error:', pdfError.message);
             return res.json({ success: false, message: "Failed to parse PDF. Make sure it's a valid, text-based PDF (not scanned/image-based)." });
-        } finally {
-            // Always clean up the temp file from disk
-            if (resume.path && fs.existsSync(resume.path)) {
-                fs.unlinkSync(resume.path);
-            }
         }
+        // No unlinkSync needed — memory storage has no temp file
 
-        // Guard against empty/scanned PDFs
         if (!extractedText || extractedText.length < 50) {
-            return res.json({ success: false, message: "Could not extract text from this PDF. It may be a scanned/image-based resume. Please use a text-based PDF." });
+            return res.json({ success: false, message: "Could not extract text from this PDF. It may be a scanned or image-based resume." });
         }
 
         const prompt = `You are an expert resume reviewer and career coach. Carefully analyze the following resume and provide structured, actionable feedback covering:
