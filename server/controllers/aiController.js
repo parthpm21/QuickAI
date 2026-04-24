@@ -7,31 +7,63 @@ import FormData from 'form-data'
 import fs from 'fs'
 import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
-const AI = new OpenAI({
-    apiKey: process.env.GEMINI_API_KEY,
-    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
-});
+// ── API Key Pool ─────────────────────────────────────────────────────────────
+const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
 
-// Retry helper: retries fn up to maxRetries times on 429 errors with exponential backoff
-const withRetry = async (fn, maxRetries = 3) => {
+const buildKeyPool = () => {
+    const geminiKeys = [];
+    if (process.env.GEMINI_API_KEY)   geminiKeys.push(process.env.GEMINI_API_KEY);
+    if (process.env.GEMINI_API_KEY_2) geminiKeys.push(process.env.GEMINI_API_KEY_2);
+    if (process.env.GEMINI_API_KEY_3) geminiKeys.push(process.env.GEMINI_API_KEY_3);
+    
+    const pool = geminiKeys.map(key => ({
+        client: new OpenAI({ apiKey: key, baseURL: GEMINI_BASE_URL }),
+        model: "gemini-2.0-flash",
+        name: "Gemini"
+    }));
+
+    if (process.env.GROQ_API_KEY) {
+        pool.push({
+            client: new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" }),
+            model: "llama-3.3-70b-versatile",
+            name: "Groq"
+        });
+    }
+
+    if (pool.length === 0) throw new Error("No AI API keys found in environment.");
+    return pool;
+};
+
+const aiPool = buildKeyPool();
+console.log(`AI pool ready: ${aiPool.length} provider(s) loaded.`);
+
+// ── Smart call helper ─────────────────────────────────────────────────────────
+const callAI = async (buildParams) => {
     let lastError;
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // Try every provider in the pool
+    for (let i = 0; i < aiPool.length; i++) {
         try {
-            return await fn();
+            const { client, model, name } = aiPool[i];
+            const params = buildParams();
+            params.model = model; // Override model based on provider
+            return await client.chat.completions.create(params);
         } catch (err) {
             const status = err?.status || err?.response?.status;
-            if (status === 429 && attempt < maxRetries) {
-                // Exponential backoff: 2s, 4s, 8s
-                const delay = Math.pow(2, attempt + 1) * 1000;
-                console.log(`Rate limited (429). Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+            if (status === 429) {
+                console.log(`${aiPool[i].name} (Key ${i + 1}) rate-limited. Trying next...`);
                 lastError = err;
             } else {
                 throw err;
             }
         }
     }
-    throw lastError;
+    // Final fallback: wait 3s and try the first one again
+    console.log("All providers exhausted. Waiting 3s...");
+    await new Promise(r => setTimeout(r, 3000));
+    const first = aiPool[0];
+    const params = buildParams();
+    params.model = first.model;
+    return await first.client.chat.completions.create(params);
 };
 
 
@@ -46,8 +78,8 @@ export const generateArticle = async (req, res) => {
             return res.json({ success: false, message: "Limit reached. Upgrade to continue." })
         }
 
-        const response = await withRetry(() => AI.chat.completions.create({
-            model: "gemini-1.5-flash",
+        const response = await callAI(() => ({
+            model: "gemini-2.0-flash",
             messages: [
                 {
                     role: "user",
@@ -95,8 +127,8 @@ export const generateBlogTitle = async (req, res) => {
             return res.json({ success: false, message: "Limit reached. Upgrade to continue." })
         }
 
-        const response = await withRetry(() => AI.chat.completions.create({
-            model: "gemini-1.5-flash",
+        const response = await callAI(() => ({
+            model: "gemini-2.0-flash",
             messages: [
                 {
                     role: "user",
@@ -280,8 +312,8 @@ export const resumeReview = async (req, res) => {
 Resume content:
 ${extractedText}`;
 
-        const response = await withRetry(() => AI.chat.completions.create({
-            model: "gemini-1.5-flash",
+        const response = await callAI(() => ({
+            model: "gemini-2.0-flash",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7,
             max_tokens: 1500,

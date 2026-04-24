@@ -25,12 +25,15 @@ const Footer = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-14">
         
         <div className="sm:col-span-2 lg:col-span-1">
-          <a href="https://prebuiltui.com">
-            <p className="font-bold text-lg text-gray-800">PrebuiltUI</p>
-          </a>
-          <p className="text-sm leading-7 mt-6">
-            PrebuiltUI is a free and open-source UI component library with over
-            340+ beautifully crafted components built with Tailwind CSS.
+          <div className="flex items-center gap-2 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-indigo-100">
+              Q
+            </div>
+            <p className="font-bold text-2xl text-gray-900 tracking-tight">Quick<span className="text-indigo-600">.ai</span></p>
+          </div>
+          <p className="text-sm leading-7 text-gray-500 max-w-xs">
+            Unlock the power of Artificial Intelligence to generate stunning articles, 
+            blog titles, and perfect resumes in seconds.
           </p>
         </div>
 
@@ -65,14 +68,32 @@ const Footer = () => {
 
       </div>
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-4 border-t mt-6 border-slate-200">
-        <p>
-          © 2025 <a href="https://prebuiltui.com">PrebuiltUI</a>. All rights reserved.
-        </p>
-        <div className="flex items-center gap-4">
-          <a href="/">Privacy Policy</a>
-          <a href="/">Terms</a>
-          <a href="/">Cookies</a>
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 py-8 border-t mt-12 border-slate-100">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-lg flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-200">
+            Q
+          </div>
+          <p className="font-medium text-gray-900">
+            © 2025 <span className="text-indigo-600 font-semibold">Quick.ai</span>. All rights reserved.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-center md:items-end gap-1">
+          <p className="text-gray-400 text-xs uppercase tracking-widest font-semibold">Crafted with Passion</p>
+          <div className="flex items-center gap-2 group cursor-default">
+            <span className="text-gray-600">Made with</span>
+            <span className="text-red-500 animate-pulse text-lg">❤️</span>
+            <span className="text-gray-600">by</span>
+            <span className="font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 group-hover:from-pink-600 group-hover:to-indigo-600 transition-all duration-500 text-base">
+              Parth
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 text-gray-500 font-medium">
+          <a href="/" className="hover:text-indigo-600 transition-colors">Privacy</a>
+          <a href="/" className="hover:text-indigo-600 transition-colors">Terms</a>
+          <a href="/" className="hover:text-indigo-600 transition-colors">Cookies</a>
         </div>
       </div>
     </footer>
