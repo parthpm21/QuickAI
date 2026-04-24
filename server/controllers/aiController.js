@@ -12,6 +12,28 @@ const AI = new OpenAI({
     baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/"
 });
 
+// Retry helper: retries fn up to maxRetries times on 429 errors with exponential backoff
+const withRetry = async (fn, maxRetries = 3) => {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await fn();
+        } catch (err) {
+            const status = err?.status || err?.response?.status;
+            if (status === 429 && attempt < maxRetries) {
+                // Exponential backoff: 2s, 4s, 8s
+                const delay = Math.pow(2, attempt + 1) * 1000;
+                console.log(`Rate limited (429). Retrying in ${delay / 1000}s... (attempt ${attempt + 1}/${maxRetries})`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                lastError = err;
+            } else {
+                throw err;
+            }
+        }
+    }
+    throw lastError;
+};
+
 
 export const generateArticle = async (req, res) => {
     try {
@@ -24,8 +46,8 @@ export const generateArticle = async (req, res) => {
             return res.json({ success: false, message: "Limit reached. Upgrade to continue." })
         }
 
-        const response = await AI.chat.completions.create({
-            model: "gemini-2.0-flash",
+        const response = await withRetry(() => AI.chat.completions.create({
+            model: "gemini-1.5-flash",
             messages: [
                 {
                     role: "user",
@@ -34,7 +56,7 @@ export const generateArticle = async (req, res) => {
             ],
             temperature: 0.7,
             max_tokens: parseInt(length) || 800,
-        });
+        }));
 
         const content = response.choices[0].message.content
 
@@ -52,7 +74,11 @@ export const generateArticle = async (req, res) => {
         res.json({ success: true, content })
 
     } catch (error) {
-        console.log(error.message)
+        console.log('generateArticle error:', error.message);
+        const status = error?.status || error?.response?.status;
+        if (status === 429) {
+            return res.json({ success: false, message: "AI service is currently busy. Please wait a moment and try again." });
+        }
         res.json({ success: false, message: error.message })
     }
 }
@@ -69,8 +95,8 @@ export const generateBlogTitle = async (req, res) => {
             return res.json({ success: false, message: "Limit reached. Upgrade to continue." })
         }
 
-        const response = await AI.chat.completions.create({
-            model: "gemini-2.0-flash",
+        const response = await withRetry(() => AI.chat.completions.create({
+            model: "gemini-1.5-flash",
             messages: [
                 {
                     role: "user",
@@ -79,7 +105,7 @@ export const generateBlogTitle = async (req, res) => {
             ],
             temperature: 0.7,
             max_tokens: 500,
-        });
+        }));
 
         const content = response.choices[0].message.content
 
@@ -97,7 +123,11 @@ export const generateBlogTitle = async (req, res) => {
         res.json({ success: true, content })
 
     } catch (error) {
-        console.log(error.message)
+        console.log('generateBlogTitle error:', error.message);
+        const status = error?.status || error?.response?.status;
+        if (status === 429) {
+            return res.json({ success: false, message: "AI service is currently busy. Please wait a moment and try again." });
+        }
         res.json({ success: false, message: error.message })
     }
 }
@@ -250,12 +280,12 @@ export const resumeReview = async (req, res) => {
 Resume content:
 ${extractedText}`;
 
-        const response = await AI.chat.completions.create({
-            model: "gemini-2.0-flash",
+        const response = await withRetry(() => AI.chat.completions.create({
+            model: "gemini-1.5-flash",
             messages: [{ role: "user", content: prompt }],
             temperature: 0.7,
             max_tokens: 1500,
-        });
+        }));
 
         const result = response.choices[0].message.content;
 
@@ -268,6 +298,10 @@ ${extractedText}`;
 
     } catch (error) {
         console.log('resumeReview error:', error);
+        const status = error?.status || error?.response?.status;
+        if (status === 429) {
+            return res.json({ success: false, message: "AI service is currently busy. Please wait a moment and try again." });
+        }
         res.json({ success: false, message: error.message });
     }
 };
